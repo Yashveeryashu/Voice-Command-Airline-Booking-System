@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+
+    <title>Airline Booking Form</title>
+    
+    <script>
+        async function fetchSpeechData() {
+            // Alert to signal the user to start speaking
+            alert("Start speaking...");
+            
+            // Retrieve the CSRF token from the meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            // Send the request with the CSRF token
+            try {
+                const response = await fetch('/process-speech/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken  // Add CSRF token here
+                    },
+                    body: JSON.stringify({})
+                });
+        
+                const data = await response.json();
+                
+                // Alert to indicate recording is complete
+                alert("Recording complete");
+                
+                console.log("Received data:", data);  // Debugging
+        
+                // Populate form fields if no error
+                if (!data.error) {
+                    fillForm(data);
+                } else {
+                    alert(data.error);
+                }
+            } catch (error) {
+                alert("An error occurred during the request.");
+                console.error("Error:", error);
+            }
+        }
+    
+        function fillForm(data) {
+            // Fill in the form fields with the returned data
+            document.querySelector(`input[name="tripType"][value="${data.tripType}"]`).checked = true;
+            toggleReturnDate();
+            document.getElementById('from').value = data.from;
+            document.getElementById('to').value = data.to;
+            document.getElementById('departureDate').value = data.departureDate;
+            document.getElementById('returnDate').value = data.returnDate;
+            document.getElementById('passengers').value = data.passengers;
+            document.getElementById('class').value = data.class;
+        }
+    
+        function toggleReturnDate() {
+            const tripType = document.querySelector('input[name="tripType"]:checked').value;
+            const returnDateField = document.getElementById('returnDate');
+            returnDateField.disabled = (tripType === 'oneWay');
+        }
+    </script>
+    
+    
+    
+</head>
+<body>
+
+<div class="form-container">
+    <h2>Airline Booking Form</h2>
+    <form>
+        <!-- Trip Type -->
+        <div class="form-group">
+            <label>Trip Type:</label>
+            <label><input type="radio" name="tripType" value="roundTrip" checked onclick="toggleReturnDate()"> Round Trip</label>
+            <label><input type="radio" name="tripType" value="oneWay" onclick="toggleReturnDate()"> One Way</label>
+        </div>
+
+        <!-- From and To Destinations -->
+        <div class="form-group">
+            <label for="from">From:</label>
+            <input type="text" id="from" name="from" placeholder="Enter departure city" required>
+        </div>
+
+        <div class="form-group">
+            <label for="to">To:</label>
+            <input type="text" id="to" name="to" placeholder="Enter destination city" required>
+        </div>
+
+        <!-- Departure and Return Dates -->
+        <div class="form-group">
+            <label for="departureDate">Departure Date:</label>
+            <input type="date" id="departureDate" name="departureDate" required>
+        </div>
+
+        <div class="form-group">
+            <label for="returnDate">Return Date:</label>
+            <input type="date" id="returnDate" name="returnDate">
+        </div>
+
+        <!-- Passengers -->
+        <div class="form-group">
+            <label for="passengers">Passengers:</label>
+            <select id="passengers" name="passengers" required>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+            </select>
+        </div>
+
+        <!-- Class -->
+        <div class="form-group">
+            <label for="class">Class:</label>
+            <select id="class" name="class" required>
+                <option value="economy">Economy</option>
+                <option value="business">Business</option>
+                <option value="first">First Class</option>
+            </select>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="button" onclick="fetchSpeechData()">Use Voice Command</button>
+        <button type="submit">Search Flights</button>
+    </form>
+</div>
+
+</body>
+</html>
