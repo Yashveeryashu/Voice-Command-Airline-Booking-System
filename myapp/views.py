@@ -15,22 +15,25 @@ def process_speech(request):
         
         with sr.Microphone() as source:
             print("Please speak something...")
-            recognizer.adjust_for_ambient_noise(source, duration=2)  # Adjust for ambient noise over 2 seconds
+            recognizer.adjust_for_ambient_noise(source, duration=2)
             
             try:
-                # Listen with extended phrase time limit
-                audio_data = recognizer.listen(source, phrase_time_limit=10)  # Listen up to 10 seconds in one phrase
-                text = recognizer.recognize_google(audio_data)  # Recognize the speech
+                audio_data = recognizer.listen(source, phrase_time_limit=10)
+                text = recognizer.recognize_google(audio_data)
                 print("You said:", text)
                 
-                # Parse text for form fields
                 form_data = parse_speech_to_form_data(text)
+                
+                # Speak the booking information
+                speak_booking_info(form_data)
+                
                 return JsonResponse(form_data)
             
             except sr.UnknownValueError:
                 return JsonResponse({"error": "Could not understand the audio."}, status=400)
             except sr.RequestError:
                 return JsonResponse({"error": "Request error with the speech recognition service."}, status=500)
+
 
 # Parsing function for demonstration
 # Load spaCy's English language model
@@ -92,10 +95,62 @@ def parse_speech_to_form_data(speech_text):
     print("Parsed data:", data)
     return data
    
-   
+from gtts import gTTS
+import os
+
+def speak_booking_info(booking_info):
+    # Combine the booking information into a single string
+    text = f"You have booked a {booking_info['tripType']} from {booking_info['from']} to {booking_info['to']}."
+    text += f" Departure date is {booking_info['departureDate']}."
+    if booking_info['returnDate']:
+        text += f" Return date is {booking_info['returnDate']}."
+    text += f" You have {booking_info['passengers']} passenger(s) and your class is {booking_info['class']}."
+
+    # Create a gTTS object
+    tts = gTTS(text=text, lang='en')
+
+    # Save the speech to a file
+    tts.save("booking_info.mp3")
+
+    # Play the audio (this will work on most systems, but you may need to adapt this for your OS)
+    # os.system("start booking_info.mp3")  # For Windows
+    # os.system("afplay booking_info.mp3")  # For Mac
+    # os.system("mpg123 booking_info.mp3")  # For Linux
+
 
 from django.shortcuts import render
 
 def airline_form(request):
     return render(request, 'myapp/index.html')
 
+
+
+from django.shortcuts import render, redirect
+from .models import FlightBooking
+from django.http import JsonResponse
+
+def submit_booking(request):
+    if request.method == 'POST':
+        trip_type = request.POST.get('tripType')
+        from_location = request.POST.get('from')
+        to_location = request.POST.get('to')
+        departure_date = request.POST.get('departureDate')
+        return_date = request.POST.get('returnDate') or None  # Handle one-way trip case
+        passengers = request.POST.get('passengers')
+        travel_class = request.POST.get('class')
+
+        # Save the data to the database
+        booking = FlightBooking.objects.create(
+            trip_type=trip_type,
+            from_location=from_location,
+            to_location=to_location,
+            departure_date=departure_date,
+            return_date=return_date,
+            passengers=passengers,
+            travel_class=travel_class
+        )
+
+        # Redirect to a success page or send a response
+        return render(request, 'myapp/booking_success.html', {'booking': booking})
+    else:
+        return JsonResponse({'error': 'Invalid request method'}, status=400)

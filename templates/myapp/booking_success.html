@@ -1,0 +1,28 @@
+<!-- templates/myapp/booking_success.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmation</title>
+    <link rel="stylesheet" href="{% static 'myapp/styles2.css' %}">
+</head>
+<body>
+    <h1>Booking Successful</h1>
+    <p>Your booking has been successfully created with the following details:</p>
+    <ul>
+        <li><strong>Booking ID:</strong> {{ booking.id }}</li>
+        <li><strong>Trip Type:</strong> {{ booking.trip_type }}</li>
+        <li><strong>From:</strong> {{ booking.from_location }}</li>
+        <li><strong>To:</strong> {{ booking.to_location }}</li>
+        <li><strong>Departure Date:</strong> {{ booking.departure_date }}</li>
+        {% if booking.return_date %}
+            <li><strong>Return Date:</strong> {{ booking.return_date }}</li>
+        {% endif %}
+        <li><strong>Passengers:</strong> {{ booking.passengers }}</li>
+        <li><strong>Class:</strong> {{ booking.travel_class }}</li>
+    </ul>
+</body>
+</html>
+

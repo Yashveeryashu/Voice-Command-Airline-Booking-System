@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <link href="{% static 'css/style.css' %}" rel="stylesheet">
-
     <title>Airline Booking Form</title>
     
     <script>
@@ -27,17 +26,18 @@
                     },
                     body: JSON.stringify({})
                 });
-        
+    
                 const data = await response.json();
                 
                 // Alert to indicate recording is complete
                 alert("Recording complete");
                 
                 console.log("Received data:", data);  // Debugging
-        
+    
                 // Populate form fields if no error
                 if (!data.error) {
                     fillForm(data);
+                    speakData(data);  // Speak the booking information
                 } else {
                     alert(data.error);
                 }
@@ -59,6 +59,18 @@
             document.getElementById('class').value = data.class;
         }
     
+        function speakData(data) {
+            const speech = new SpeechSynthesisUtterance();
+            speech.text = `You have booked a ${data.tripType} from ${data.from} to ${data.to}. Departure date is ${data.departureDate}.`;
+            if (data.returnDate) {
+                speech.text += ` Return date is ${data.returnDate}.`;
+            }
+            speech.text += ` You have ${data.passengers} passenger(s) and your class is ${data.class}.`;
+            
+            // Speak the text using the speech synthesis API
+            window.speechSynthesis.speak(speech);
+        }
+    
         function toggleReturnDate() {
             const tripType = document.querySelector('input[name="tripType"]:checked').value;
             const returnDateField = document.getElementById('returnDate');
@@ -67,13 +79,13 @@
     </script>
     
     
-    
 </head>
 <body>
 
 <div class="form-container">
     <h2>Airline Booking Form</h2>
-    <form>
+    <form   method="post" action="{% url 'submit_booking' %}">
+        {% csrf_token %}
         <!-- Trip Type -->
         <div class="form-group">
             <label>Trip Type:</label>
@@ -128,7 +140,7 @@
             </select>
         </div>
 
-        <!-- Submit Button -->
+        <!-- Buttons -->
         <button type="button" onclick="fetchSpeechData()">Use Voice Command</button>
         <button type="submit">Search Flights</button>
     </form>
