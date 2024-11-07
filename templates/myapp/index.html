@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% comment %} <!DOCTYPE html>
 {% load static %}
 <html lang="en">
 <head>
@@ -143,6 +143,202 @@
         <!-- Buttons -->
         <button type="button" onclick="fetchSpeechData()">Use Voice Command</button>
         <button type="submit">Search Flights</button>
+    </form>
+</div>
+
+</body>
+</html> {% endcomment %}
+
+
+
+<!-- myapp/templates/myapp/index.html -->
+
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    <title>Airline Booking Form</title>
+    
+    <script>
+        function fetchFieldSpeechData(fieldName) {
+            // Check if the browser supports the Web Speech API
+            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Your browser does not support Speech Recognition. Please use a compatible browser.");
+                return;
+            }
+
+            var recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.start();
+
+            recognition.onresult = async function(event) {
+                var speechResult = event.results[0][0].transcript;
+                console.log('Speech received: ' + speechResult);
+
+                // Send the speech result to the server
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                
+                try {
+                    const response = await fetch(`/process-speech/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify({
+                            field: fieldName,
+                            text: speechResult
+                        })
+                    });
+
+                    const data = await response.json();
+                    console.log("Received data:", data);
+
+                    if (!data.error) {
+                        fillField(fieldName, data[fieldName]);
+                        speakData(fieldName, data[fieldName]);  // Speak the booking information for the field
+                    } else {
+                        alert(data.error);
+                    }
+                } catch (error) {
+                    alert("An error occurred during the request.");
+                    console.error("Error:", error);
+                }
+            };
+
+            recognition.onspeechend = function() {
+                recognition.stop();
+                alert("Recording complete");
+            };
+
+            recognition.onerror = function(event) {
+                alert('Error occurred in recognition: ' + event.error);
+                console.error('Recognition error:', event.error);
+            };
+        }
+
+        function fillField(fieldName, value) {
+            if (fieldName === "tripType") {
+                document.querySelector(`input[name="tripType"][value="${value}"]`).checked = true;
+                toggleReturnDate();
+            } else {
+                document.getElementById(fieldName).value = value;
+            }
+        }
+
+        function speakData(fieldName, value) {
+            const speech = new SpeechSynthesisUtterance();
+            if (fieldName === "tripType") {
+                speech.text = `Trip type set to ${value === 'roundTrip' ? 'Round Trip' : 'One Way'}.`;
+            } else if (fieldName === "from") {
+                speech.text = `From location set to ${value}.`;
+            } else if (fieldName === "to") {
+                speech.text = `To location set to ${value}.`;
+            } else if (fieldName === "departureDate") {
+                speech.text = `Departure date set to ${value}.`;
+            } else if (fieldName === "returnDate") {
+                speech.text = `Return date set to ${value}.`;
+            } else if (fieldName === "passengers") {
+                speech.text = `${value} passenger(s).`;
+            } else if (fieldName === "class") {
+                speech.text = `Class set to ${value}.`;
+            }
+
+            window.speechSynthesis.speak(speech);
+        }
+
+        function toggleReturnDate() {
+            const tripType = document.querySelector('input[name="tripType"]:checked').value;
+            const returnDateField = document.getElementById('returnDate');
+            returnDateField.disabled = (tripType === 'oneWay');
+        }
+    </script>
+    
+</head>
+<body>
+
+<div class="form-container">
+    <h2>Airline Booking Form</h2>
+    <form method="post" action="{% url 'submit_booking' %}">
+        {% csrf_token %}
+        
+        <!-- Trip Type -->
+        <div class="form-group">
+            <label>Trip Type:</label>
+            <div class="radio-group">
+                <label><input type="radio" name="tripType" value="roundTrip" checked onclick="toggleReturnDate()"> Round Trip</label>
+                <label><input type="radio" name="tripType" value="oneWay" onclick="toggleReturnDate()"> One Way</label>
+            </div>
+            <button type="button" onclick="fetchFieldSpeechData('tripType')">Voice Command</button>
+        </div>
+
+        <!-- From Destination -->
+        <div class="form-group">
+            <label for="from">From:</label>
+            <input type="text" id="from" name="from" placeholder="Enter departure city" required>
+            <button type="button" onclick="fetchFieldSpeechData('from')">Voice Command</button>
+        </div>
+
+        <!-- To Destination -->
+        <div class="form-group">
+            <label for="to">To:</label>
+            <input type="text" id="to" name="to" placeholder="Enter destination city" required>
+            <button type="button" onclick="fetchFieldSpeechData('to')">Voice Command</button>
+        </div>
+
+        <!-- Departure Date -->
+        <div class="form-group">
+            <label for="departureDate">Departure Date:</label>
+            <input type="date" id="departureDate" name="departureDate" required>
+            <button type="button" onclick="fetchFieldSpeechData('departureDate')">Voice Command</button>
+        </div>
+
+        <!-- Return Date -->
+        <div class="form-group">
+            <label for="returnDate">Return Date:</label>
+            <input type="date" id="returnDate" name="returnDate">
+            <button type="button" onclick="fetchFieldSpeechData('returnDate')">Voice Command</button>
+        </div>
+
+        <!-- Passengers -->
+        <div class="form-group">
+            <label for="passengers">Passengers:</label>
+            <select id="passengers" name="passengers" required>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+            </select>
+            <button type="button" onclick="fetchFieldSpeechData('passengers')">Voice Command</button>
+        </div>
+
+        <!-- Class -->
+        <div class="form-group">
+            <label for="class">Class:</label>
+            <select id="class" name="class" required>
+                <option value="economy">Economy</option>
+                <option value="business">Business</option>
+                <option value="first">First Class</option>
+            </select>
+            <button type="button" onclick="fetchFieldSpeechData('class')">Voice Command</button>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="button-container">
+            <button type="submit">Search Flights</button>
+        </div>
     </form>
 </div>
 
